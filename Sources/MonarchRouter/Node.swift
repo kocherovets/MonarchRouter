@@ -163,13 +163,11 @@ extension RoutingNode where Presenter == RoutePresenter
             // should present a modal to handle the Request
             else if let modal = modals.firstResult({ modal in modal.shouldHandleRoute(request) ? modal : nil })
             {
-                dispatchOnMainThreadIfNeeded {
-                    let presentable = router.getPresentable()
-                    if let modal2 = modal as? RoutingNode<RoutePresenter> {
-                        dispatchOnMainThreadIfNeeded {
-                            let presentable = router.getPresentable()
-                            modal2.presenter.presentModal?(modal.getPresentable(), presentable)
-                        }
+                let presentable = router.getPresentable()
+                if let modal2 = modal as? RoutingNode<RoutePresenter> {
+                    dispatchOnMainThreadIfNeeded {
+                        let presentable = router.getPresentable()
+                        modal2.presenter.presentModal?(modal.getPresentable(), presentable)
                     }
                 }
                 
