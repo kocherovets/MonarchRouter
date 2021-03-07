@@ -167,7 +167,7 @@ extension RoutingNode where Presenter == RoutePresenter
                 if let modal2 = modal as? RoutingNode<RoutePresenter> {
                     dispatchOnMainThreadIfNeeded {
                         let presentable = router.getPresentable()
-                        modal2.presenter.presentModal?(modal.getPresentable(), presentable)
+                        modal2.presenter.presentModal(modal.getPresentable(), presentable)
                     }
                 }
                 
