@@ -77,8 +77,11 @@ public struct RoutingNode<Presenter: RoutePresenterType>: RoutingNodeType
     
     public func dismissSubstack() {
         dispatchOnMainThreadIfNeeded {
-            if let modal = self.substack?.first?.getPresentable(), let presenter = self.presenter as? RoutePresenterCapableOfModalPresentationType {
-                presenter.dismissModal(modal)
+//            if let modal = self.substack?.first?.getPresentable(), let presenter = self.presenter as? RoutePresenterCapableOfModalPresentationType {
+//                presenter.dismissModal(modal)
+//            }
+            if let modal = self.substack?.first?.getPresentable() {
+                modal.presentingViewController?.dismiss(animated: true, completion: nil)
             }
         }
     }
@@ -163,7 +166,10 @@ extension RoutingNode where Presenter == RoutePresenter
             // should present a modal to handle the Request
             else if let modal = modals.firstResult({ modal in modal.shouldHandleRoute(request) ? modal : nil })
             {
-                let presentable = router.getPresentable()
+//                dispatchOnMainThreadIfNeeded {
+//                    let presentable = router.getPresentable()
+//                    router.presenter.presentModal(modal.getPresentable(), presentable)
+//                }
                 if let modal2 = modal as? RoutingNode<RoutePresenter> {
                     dispatchOnMainThreadIfNeeded {
                         let presentable = router.getPresentable()
