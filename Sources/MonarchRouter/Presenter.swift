@@ -65,15 +65,12 @@ public struct RoutePresenter: RoutePresenterType, RoutePresenterCapableOfModalPr
         }
         
         
-        weak var presentedModal: UIViewController? = nil
-        
         if let presentModal = presentModal {
             self.presentModal = presentModal
         } else {
             self.presentModal = { modal, parent in
-                guard modal != presentedModal else { return }
+                guard modal.presentingViewController == nil else { return }
                 parent.present(modal, animated: true)
-                presentedModal = modal
             }
         }
         
@@ -82,7 +79,6 @@ public struct RoutePresenter: RoutePresenterType, RoutePresenterCapableOfModalPr
         } else {
             self.dismissModal = { modal in
                 modal.presentingViewController?.dismiss(animated: true, completion: nil)
-                presentedModal = nil
             }
         }
         
