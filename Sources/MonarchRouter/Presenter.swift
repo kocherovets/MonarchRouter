@@ -69,7 +69,6 @@ public struct RoutePresenter: RoutePresenterType, RoutePresenterCapableOfModalPr
             self.presentModal = presentModal
         } else {
             self.presentModal = { modal, parent in
-                guard modal.presentingViewController == nil else { return }
                 parent.present(modal, animated: true)
             }
         }
