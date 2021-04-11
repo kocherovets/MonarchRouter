@@ -13,7 +13,7 @@ import MonarchRouter
 
 /// Creating the app's Coordinator hierarchy.
 func appCoordinator(router: ProvidesRouteDispatch, setRootView: @escaping (UIViewController)->()) -> RoutingNodeType
-{    
+{
     return
         // Top level app sections' switcher
         RoutingNode(sectionsSwitcherRoutePresenter(setRootView)).switcher([

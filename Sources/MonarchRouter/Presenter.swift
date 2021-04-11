@@ -80,8 +80,8 @@ public struct RoutePresenter: RoutePresenterType, RoutePresenterCapableOfModalPr
         if let dismissModal = dismissModal {
             self.dismissModal = dismissModal
         } else {
-            self.dismissModal = { _ in
-                presentedModal?.dismiss(animated: true, completion: nil)
+            self.dismissModal = { modal in
+                modal.presentingViewController?.dismiss(animated: true, completion: nil)
                 presentedModal = nil
             }
         }
