@@ -8,38 +8,68 @@
 
 import Foundation
 
-
-
-public enum DispatchRouteOption
-{
+public enum DispatchRouteOption {
     /// Keeps presented VCs if only need to switch the junction option
     /// i.e.: when switching to a tab by it's root Route, when the tab already contains presented stack
     case junctionsOnly
 }
 
+public struct RoutersStack {
+    public init(_ routersStack: [RoutingNodeType]) {
+        self.routersStack = routersStack
+    }
 
+    public let routersStack: [RoutingNodeType]
+
+    func isContains(node: RoutingNodeType) -> Bool {
+        isContains(stack: [node])
+    }
+
+    func isContains(stack: [RoutingNodeType]) -> Bool {
+        guard stack.count > 0 else { return true }
+
+        var index: Int?
+        for i in 0 ..< routersStack.count {
+            if routersStack[i].uuid == stack[0].uuid {
+                index = i
+                break
+            }
+        }
+        if let index = index {
+            for i in 0 ..< stack.count {
+                if stack[i].uuid != routersStack[i + index].uuid {
+                    return false
+                }
+            }
+        } else {
+            return false
+        }
+        return true
+    }
+
+    func append(_ node: RoutingNodeType) -> RoutersStack {
+        RoutersStack(routersStack + [node])
+    }
+}
 
 /// State Store for the Router.
 /// Initialize one to change routes via `dispatch(_ request:)`.
-public final class RouterStore
-{
+public final class RouterStore {
     /// Primary method to make a Routing Request.
     /// - parameter request: Routing Request.
     /// - parameter options: Special options for navigation (see `DispatchRouteOption` enum).
     public func dispatch(_ request: RoutingRequestType, options: [DispatchRouteOption] = []) {
-        self.state = routerReducer(request: request, router: router(), state: self.state, options: options)
+        state = routerReducer(request: request, router: router(), state: state, options: options)
     }
-    
-    
+
     /// Primary initializer for a new `RouterStore`.
     /// - parameter router: Describes the Coordinator hierarchy for the current application. Autoclosure.
     public init(router: @autoclosure @escaping () -> RoutingNodeType) {
         self.router = router
-        self.state = RouterState()
-        self.reducer = routerReducer(request:router:state:options:)
+        state = RouterState()
+        reducer = routerReducer(request:router:state:options:)
     }
 
-    
     /// Initializer allowing for overriding the State and Reducer.
     /// - parameter router: Describes the Coordinator hierarchy for the current application. Autoclosure.
     /// - parameter state: State holds the current `RoutingNodes` stack.
@@ -53,37 +83,31 @@ public final class RouterStore
         self.state = state
         self.reducer = reducer
     }
-    
-    
+
     /// Describes the Coordinator hierarchy for the current application.
     let router: () -> RoutingNodeType
-    
+
     /// State holds the current `RoutingNodes` stack.
     var state: RouterStateType
-    
+
     /// Function to calculate a new State.
     /// Implements navigation via `RoutingNodeType`'s `setRequest` callback.
     /// Unwinds unused `RoutingNodes` (see `RoutingNodeType`'s `unwind()` function).
     let reducer: (_ request: RoutingRequestType, _ router: RoutingNodeType, _ state: RouterStateType, _ options: [DispatchRouteOption]) -> RouterStateType
 }
 
-
 /// Describes `RouterState` object.
 /// State holds the stack of Routers.
-public protocol RouterStateType
-{
+public protocol RouterStateType {
     /// The stack of Routers.
     var routersStack: [RoutingNodeType] { get set }
 }
 
 /// State holds the current Routers stack.
-struct RouterState: RouterStateType
-{
+struct RouterState: RouterStateType {
     /// The resulting Routers after performing the Request.
     var routersStack = [RoutingNodeType]()
 }
-
-
 
 /// Function to calculate a new State.
 /// Implements navigation via `RoutingNodeType`'s `performRequest` callback.
@@ -93,50 +117,131 @@ struct RouterState: RouterStateType
 /// - parameter state: State holds the current `RoutingNodes` stack.
 func routerReducer(request: RoutingRequestType, router: RoutingNodeType, state: RouterStateType, options: [DispatchRouteOption]) -> RouterStateType
 {
-    func unwind(stack: [RoutingNodeType], comparing newStack: [RoutingNodeType])
-    {
+    func unwind(stack: [RoutingNodeType], comparing newStack: [RoutingNodeType]) {
         // Recursively called for each substack
-        stack.enumerated().forEach { (i, element) in
+        stack.enumerated().forEach { i, element in
             if let substack = element.substack {
                 unwind(stack: substack, comparing: newStack[safe: i]?.substack ?? [])
             }
         }
-        
+
         // Dismissing substacks that are not present anymore
         stack.enumerated()
-            .filter({ (i, node) in
-                return node.substack != nil && newStack[safe: i]?.substack == nil
+            .filter({ i, node in
+                node.substack != nil && newStack[safe: i]?.substack == nil
             })
             .reversed()
-            .forEach { (_, node) in
+            .forEach { _, node in
                 node.dismissSubstack()
             }
-        
+
         // Finding the first RoutingNode in the stack that is not the same as in the previous Routers stack
-        if let firstDifferenceIndex = stack.enumerated().first(where: { (i, node) in
+        if let firstDifferenceIndex = stack.enumerated().first(where: { i, node in
             guard newStack.count > i else { return true }
             return node.getPresentable() != newStack[i].getPresentable()
-        })?.offset
-        {
+        })?.offset {
             // Unwinding unused `RoutingNode`s in reversed order
             stack[firstDifferenceIndex ..< stack.count]
                 .reversed()
                 .forEach { node in
                     node.dismissSubstack()
                     node.unwind()
-            }
+                }
         }
     }
-    
-    
-    // Getting a new `RoutingNode`s stack for a given Request
-    let newRoutersStack = router.testRequest(request, [])
-    
-    // Unwinding unused Routers
-    unwind(stack: state.routersStack, comparing: newRoutersStack)
-    
-    // Changing state
-    router.performRequest(request, [], options)
-    
+
+    var routersStack = state.routersStack
+//    print("-0")
+//    print("before removed")
+//    log(routersStack: routersStack)
+
+    removeUnusedRoutes(routersStack: &routersStack)
+//    print("0")
+//    print("removed")
+//    log(routersStack: routersStack)
+
+    var newRoutersStack = [RoutingNodeType]()
+    var condition: ((RoutingNodeType) -> Bool) = { _ in true }
+
+    if let node = lastNode(routersStack: routersStack) {
+        let stack = node.testRequest(request, [], { node.uuid != $0.uuid })
+        if stack.count > 1 {
+//            print("2")
+            newRoutersStack = routersStack
+            addStackAfterLastNode(routersStack: &newRoutersStack, suffixStack: Array(stack.suffix(from: 1)))
+            condition = { stack.last?.uuid == $0.uuid }
+        } else if let node = stack.first, let substack = node.substack, substack.count > 0 {
+//            print("3")
+            newRoutersStack = routersStack
+            addSubstackForLastNode(routersStack: &newRoutersStack, suffixStack: substack)
+            condition = { substack.last?.uuid == $0.uuid }
+        } else {
+//            print("1")
+            newRoutersStack = router.testRequest(request, [], { _ in true })
+        }
+    } else {
+//        print("1")
+        newRoutersStack = router.testRequest(request, [], { _ in true })
+    }
+
+//    print("newRoutersStack")
+//    log(routersStack: newRoutersStack)
+
+    unwind(stack: routersStack, comparing: newRoutersStack)
+
+    router.performRequest(request, [], options, condition)
+
     return RouterState(routersStack: newRoutersStack)
+}
+
+func removeUnusedRoutes(routersStack: inout [RoutingNodeType]) {
+    if let index = routersStack.lastIndex(where: { $0.getPresentable().view.window != nil }) {
+        routersStack = Array(routersStack.prefix(index + 1))
+    } else {
+        routersStack = []
+    }
+    for i in 0 ..< routersStack.count {
+        if routersStack[i].substack != nil {
+            removeUnusedRoutes(routersStack: &(routersStack[i].substack!))
+        }
+    }
+}
+
+func lastNode(routersStack: [RoutingNodeType]) -> RoutingNodeType? {
+    for node in routersStack {
+        if let substack = node.substack, substack.count > 0 {
+            return lastNode(routersStack: substack)
+        }
+    }
+    return routersStack.last
+}
+
+func addStackAfterLastNode(routersStack: inout [RoutingNodeType], suffixStack: [RoutingNodeType]) {
+    for i in 0 ..< routersStack.count {
+        if let substack = routersStack[i].substack, substack.count > 0 {
+            addStackAfterLastNode(routersStack: &(routersStack[i].substack!), suffixStack: suffixStack)
+            return
+        }
+    }
+    routersStack = routersStack + suffixStack
+}
+
+func addSubstackForLastNode(routersStack: inout [RoutingNodeType], suffixStack: [RoutingNodeType]) {
+    for i in 0 ..< routersStack.count {
+        if let substack = routersStack[i].substack, substack.count > 0 {
+            addSubstackForLastNode(routersStack: &(routersStack[i].substack!), suffixStack: suffixStack)
+            return
+        }
+    }
+    routersStack[routersStack.count - 1].substack = suffixStack
+}
+
+func log(routersStack: [RoutingNodeType], level: Int = 1) {
+    routersStack.forEach {
+        print(level, $0.uuid)
+        print(level, $0.getPresentable())
+        if let substack = $0.substack, substack.count > 0 {
+            log(routersStack: substack, level: level + 1)
+        }
+    }
 }
