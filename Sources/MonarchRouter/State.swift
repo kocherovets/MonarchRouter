@@ -214,7 +214,7 @@ func routerReducer(request: RoutingRequestType, router: RoutingNodeType, state: 
 }
 
 func removeUnusedRoutes(routersStack: inout [RoutingNodeType]) {
-    if let index = routersStack.lastIndex(where: { $0.getPresentable().view.window != nil }) {
+    if let index = routersStack.lastIndex(where: { $0.getPresentable().isViewLoaded && $0.getPresentable().view.window != nil }) {
         routersStack = Array(routersStack.prefix(index + 1))
     } else {
         routersStack = []
