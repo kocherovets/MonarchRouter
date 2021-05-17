@@ -151,14 +151,14 @@ func routerReducer(request: RoutingRequestType, router: RoutingNodeType, state: 
     }
 
     var routersStack = state.routersStack
-    print("-0------------------------------")
-    print("before removed")
-    log(routersStack: routersStack)
+//    print("-0------------------------------")
+//    print("before removed")
+//    log(routersStack: routersStack)
 
     removeUnusedRoutes(routersStack: &routersStack)
-    print("000")
-    print("removed")
-    log(routersStack: routersStack)
+//    print("000")
+//    print("removed")
+//    log(routersStack: routersStack)
 
     var newRoutersStack = [RoutingNodeType]()
     var condition: ((RoutingNodeType) -> Bool) = { _ in true }
@@ -170,15 +170,13 @@ func routerReducer(request: RoutingRequestType, router: RoutingNodeType, state: 
             let stack = node.testRequest(request, [], { node.uuid != $0.uuid }, &badUUIDs)
             badUUIDs[node.uuid] = nil
             if stack.count > 1 {
-                print("222")
+//                print("222")
                 newRoutersStack = routersStack
                 addStackAfterLastNode(routersStack: &newRoutersStack, suffixStack: Array(stack.suffix(from: 1)))
-//                condition = { stack.last?.uuid == $0.uuid }
             } else if let node = stack.first, let substack = node.substack, substack.count > 0 {
-                print("333")
+//                print("333")
                 newRoutersStack = routersStack
                 addSubstackForLastNode(routersStack: &newRoutersStack, suffixStack: substack)
-//                condition = { substack.last?.uuid == $0.uuid }
             }
         }
         if newRoutersStack.count == 0 {
@@ -194,17 +192,17 @@ func routerReducer(request: RoutingRequestType, router: RoutingNodeType, state: 
             break
         }
         routersStack2 = removeLastNode(routersStack: routersStack2)
-        print("444")
-        log(routersStack: routersStack2)
+//        print("444")
+//        log(routersStack: routersStack2)
     }
 
     if newRoutersStack.count == 0 {
-        print("111")
+//        print("111")
         newRoutersStack = router.testRequest(request, [], { _ in true }, &badUUIDs)
     }
 
-    print("newRoutersStack")
-    log(routersStack: newRoutersStack)
+//    print("newRoutersStack")
+//    log(routersStack: newRoutersStack)
 
     unwind(stack: routersStack, comparing: newRoutersStack)
 
