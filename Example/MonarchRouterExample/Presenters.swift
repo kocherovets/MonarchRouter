@@ -10,7 +10,9 @@ import UIKit
 import MonarchRouter
 import Differ
 
-
+class StabSwitcherVC: UIViewController {
+    
+}
 
 // MARK: - App sections' switcher
 
@@ -24,7 +26,10 @@ func sectionsSwitcherRoutePresenter(_ setRootView: @escaping (UIViewController)-
     return RoutePresenterSwitcher(
         getPresentable: {
             guard let vc = rootPresentable
-                else { fatalError("Impossible to get Presentable for the Switcher type root RoutingNode. Probably there's no other RoutingNode resolving the Request?") }
+                else {
+                return StabSwitcherVC()
+//                fatalError("Impossible to get Presentable for the Switcher type root RoutingNode. Probably there's no other RoutingNode resolving the Request?")
+            }
             return vc
         },
         setOptionSelected: { option in
@@ -166,6 +171,13 @@ func lazyNavigationRoutePresenter() -> RoutePresenterStack
 // MARK: - General
 
 func lazyPresenter(for endpoint: EndpointViewControllerId, router: ProvidesRouteDispatch) -> RoutePresenter
+{
+    return RoutePresenter.lazyPresenter(wrap: buildEndpoint(endpoint, router: router))
+}
+
+// MARK: - General
+
+func lp(for endpoint: EndpointViewControllerId, router: ProvidesRouteDispatch) -> RoutePresenter
 {
     return RoutePresenter.lazyPresenter(wrap: buildEndpoint(endpoint, router: router))
 }

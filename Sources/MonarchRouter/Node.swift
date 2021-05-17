@@ -40,7 +40,7 @@ public protocol RoutingNodeType {
 
     /// Returns `RoutingNode`s stack for provided Request.
     /// Configured for each respective `RoutingNode` type.
-    var testRequest: (_ request: RoutingRequestType, _ routers: [RoutingNodeType], _ condition: (RoutingNodeType) -> Bool) -> [RoutingNodeType] { get }
+    var testRequest: (_ request: RoutingRequestType, _ routers: [RoutingNodeType], _ condition: (RoutingNodeType) -> Bool, _ badUUIDs: inout [String: Bool]) -> [RoutingNodeType] { get }
 
     /// Passes actions to the Presenter to update the view for provided Request.
     /// Configured for each respective `RoutingNode` type.
@@ -71,11 +71,12 @@ public protocol RoutingNodeType {
 /// The `RoutingNode` is a structure that collects functions together that are related to the same endpoint or intermidiate routing point.
 /// Each `RoutingNode` also requires a Presenter, to which any required changes are passed.
 public struct RoutingNode<Presenter: RoutePresenterType>: RoutingNodeType {
-    public let uuid = UUID().uuidString
+    public let uuid: String
 
     /// Primary initializer for a `RoutingNode`.
     /// - parameter presenter: A Presenter object to pass UI changes to.
-    public init(_ presenter: Presenter) {
+    public init(uuid: String = UUID().uuidString, _ presenter: Presenter) {
+        self.uuid = uuid
         self.presenter = presenter
     }
 
@@ -93,7 +94,7 @@ public struct RoutingNode<Presenter: RoutePresenterType>: RoutingNodeType {
 
     public fileprivate(set) var shouldHandleRouteExclusively: (_ request: RoutingRequestType) -> Bool = { _ in false }
 
-    public fileprivate(set) var testRequest: (RoutingRequestType, [RoutingNodeType], (RoutingNodeType) -> Bool) -> [RoutingNodeType] = { _, _, _ in [] }
+    public fileprivate(set) var testRequest: (RoutingRequestType, [RoutingNodeType], (RoutingNodeType) -> Bool, inout [String: Bool]) -> [RoutingNodeType] = { _, _, _, _ in [] }
 
     public fileprivate(set) var performRequest: (_ request: RoutingRequestType, _ routers: [RoutingNodeType], _ options: [DispatchRouteOption], _ condition: @escaping ((RoutingNodeType) -> Bool)) -> Void
         = { _, _, _, _ in }
@@ -141,9 +142,14 @@ extension RoutingNode where Presenter == RoutePresenter {
             isMatching(request)
         }
 
-        router.testRequest = { request, routers, condition in
+        router.testRequest = { request, routers, condition, badUUIDs in
             router.substack = nil
 
+            if badUUIDs[router.uuid] != nil {
+                return routers
+            }
+            badUUIDs[router.uuid] = true
+            
             // this RoutingNode handles the Request
             if isMatching(request) && condition(self) {
                 return routers + [router]
@@ -152,7 +158,7 @@ extension RoutingNode where Presenter == RoutePresenter {
             // should present a modal to handle the Request
             else if let modal = modals.firstResult({ modal in modal.shouldHandleRoute(request, condition) ? modal : nil })
             {
-                router.substack = modal.testRequest(request, routers, condition)
+                router.substack = modal.testRequest(request, routers, condition, &badUUIDs)
 //                return modal.testRequest(request, routers + [router], condition)
                 return routers + [router]
             }
@@ -160,7 +166,7 @@ extension RoutingNode where Presenter == RoutePresenter {
             // this RoutingNode's child handles the Request
             else if let child = children.firstResult({ child in child.shouldHandleRoute(request, condition) ? child : nil })
             {
-                return child.testRequest(request, routers + [router], condition)
+                return child.testRequest(request, routers + [router], condition, &badUUIDs)
             }
 
             return routers
@@ -240,11 +246,17 @@ extension RoutingNode where Presenter == RoutePresenterStack {
             stack.first?.shouldHandleRouteExclusively(request) ?? false
         }
 
-        router.testRequest = { request, routers, condition in
+        router.testRequest = { request, routers, condition, badUUIDs in
+            
+            if badUUIDs[router.uuid] != nil {
+                return routers + [router]
+            }
+            badUUIDs[router.uuid] = true
+            
             // some item in stack handles the Request
             if let stackItem = stack.firstResult({ stackItem in stackItem.shouldHandleRoute(request, condition) ? stackItem : nil })
             {
-                let stackRouters = stackItem.testRequest(request, [], condition)
+                let stackRouters = stackItem.testRequest(request, [], condition, &badUUIDs)
                 return routers + [router] + stackRouters
             }
 
@@ -277,7 +289,8 @@ extension RoutingNode where Presenter == RoutePresenterStack {
                     let presentable = router.presenter.getPresentable()
                     router.presenter.prepareRootPresentable(stackItem.getPresentable(), presentable)
 
-                    var stackRouters = stackItem.testRequest(request, [], condition)
+                    var badUUIDs = [String: Bool]()
+                    var stackRouters = stackItem.testRequest(request, [], condition, &badUUIDs)
 
                     for i in 0 ..< stackRouters.count {
                         if (stackRouters[i].substack?.count ?? 0) > 0 {
@@ -313,11 +326,17 @@ extension RoutingNode where Presenter == RoutePresenterFork {
             options.contains { option in option.shouldHandleRoute(request, condition) }
         }
 
-        router.testRequest = { request, routers, condition in
+        router.testRequest = { request, routers, condition, badUUIDs in
+
+            if badUUIDs[router.uuid] != nil {
+                return routers + [router]
+            }
+            badUUIDs[router.uuid] = true
+
             // this RoutingNode's option handles the Request
             if let option = options.firstResult({ option in option.shouldHandleRoute(request, condition) ? option : nil })
             {
-                return option.testRequest(request, routers + [router], condition)
+                return option.testRequest(request, routers + [router], condition, &badUUIDs)
             }
 
             // no option found
@@ -375,11 +394,17 @@ extension RoutingNode where Presenter == RoutePresenterSwitcher {
             options.contains { option in option.shouldHandleRoute(request, condition) }
         }
 
-        router.testRequest = { request, routers, condition in
+        router.testRequest = { request, routers, condition, badUUIDs in
+
+            if badUUIDs[router.uuid] != nil {
+                return routers + [router]
+            }
+            badUUIDs[router.uuid] = true
+
             // finding an option to handle the Request
             if let option = options.firstResult({ option in option.shouldHandleRoute(request, condition) ? option : nil })
             {
-                return option.testRequest(request, routers + [router], condition)
+                return option.testRequest(request, routers + [router], condition, &badUUIDs)
             }
 
             // no option found

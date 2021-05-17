@@ -85,7 +85,8 @@ class StoryViewController: MonarchViewController, RouteParametrizedPresentable
     @IBOutlet weak var titleLabel: UILabel!
     
     @IBAction func bookButtonAction(_ sender: Any) {
-        router?.dispatch(.book(id: 8675, title: "Book #1"))
+//        router?.dispatch(.book(id: 8675, title: "Book #1"))
+        router?.dispatch(.story(type: "ad", id: 1337, title: "Story #2"))
     }
     
     @IBAction func buttonAction(_ sender: Any) {

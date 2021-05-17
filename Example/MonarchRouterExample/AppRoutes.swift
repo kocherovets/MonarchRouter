@@ -89,7 +89,7 @@ enum AppRoute: String, RouteType {
 }
 
 /// Describes the object capable of Routes switching.
-protocol ProvidesRouteDispatch: class {
+protocol ProvidesRouteDispatch: AnyObject {
     /// Extension method to change the Route.
     /// - parameter request: `AppRoutingRequest` to navigate to.
     func dispatch(_ request: AppRoutingRequest)

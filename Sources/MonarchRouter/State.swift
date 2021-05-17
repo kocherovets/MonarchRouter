@@ -151,44 +151,65 @@ func routerReducer(request: RoutingRequestType, router: RoutingNodeType, state: 
     }
 
     var routersStack = state.routersStack
-//    print("-0")
-//    print("before removed")
-//    log(routersStack: routersStack)
+    print("-0------------------------------")
+    print("before removed")
+    log(routersStack: routersStack)
 
     removeUnusedRoutes(routersStack: &routersStack)
-//    print("0")
-//    print("removed")
-//    log(routersStack: routersStack)
+    print("000")
+    print("removed")
+    log(routersStack: routersStack)
 
     var newRoutersStack = [RoutingNodeType]()
     var condition: ((RoutingNodeType) -> Bool) = { _ in true }
+    var badUUIDs = [String: Bool]()
 
-    if let node = lastNode(routersStack: routersStack) {
-        let stack = node.testRequest(request, [], { node.uuid != $0.uuid })
-        if stack.count > 1 {
-//            print("2")
-            newRoutersStack = routersStack
-            addStackAfterLastNode(routersStack: &newRoutersStack, suffixStack: Array(stack.suffix(from: 1)))
-            condition = { stack.last?.uuid == $0.uuid }
-        } else if let node = stack.first, let substack = node.substack, substack.count > 0 {
-//            print("3")
-            newRoutersStack = routersStack
-            addSubstackForLastNode(routersStack: &newRoutersStack, suffixStack: substack)
-            condition = { substack.last?.uuid == $0.uuid }
-        } else {
-//            print("1")
-            newRoutersStack = router.testRequest(request, [], { _ in true })
+    func findNewRoutersStack(routersStack: [RoutingNodeType], badUUIDs: inout [String: Bool]) -> [RoutingNodeType]? {
+        var newRoutersStack = [RoutingNodeType]()
+        if let node = lastNode(routersStack: routersStack) {
+            let stack = node.testRequest(request, [], { node.uuid != $0.uuid }, &badUUIDs)
+            badUUIDs[node.uuid] = nil
+            if stack.count > 1 {
+                print("222")
+                newRoutersStack = routersStack
+                addStackAfterLastNode(routersStack: &newRoutersStack, suffixStack: Array(stack.suffix(from: 1)))
+//                condition = { stack.last?.uuid == $0.uuid }
+            } else if let node = stack.first, let substack = node.substack, substack.count > 0 {
+                print("333")
+                newRoutersStack = routersStack
+                addSubstackForLastNode(routersStack: &newRoutersStack, suffixStack: substack)
+//                condition = { substack.last?.uuid == $0.uuid }
+            }
         }
-    } else {
-//        print("1")
-        newRoutersStack = router.testRequest(request, [], { _ in true })
+        if newRoutersStack.count == 0 {
+            return nil
+        }
+        return newRoutersStack
     }
 
-//    print("newRoutersStack")
-//    log(routersStack: newRoutersStack)
+    var routersStack2 = routersStack
+    while routersStack2.count > 0 {
+        if let stack = findNewRoutersStack(routersStack: routersStack2, badUUIDs: &badUUIDs) {
+            newRoutersStack = stack
+            break
+        }
+        routersStack2 = removeLastNode(routersStack: routersStack2)
+        print("444")
+        log(routersStack: routersStack2)
+    }
+
+    if newRoutersStack.count == 0 {
+        print("111")
+        newRoutersStack = router.testRequest(request, [], { _ in true }, &badUUIDs)
+    }
+
+    print("newRoutersStack")
+    log(routersStack: newRoutersStack)
 
     unwind(stack: routersStack, comparing: newRoutersStack)
 
+    let uuid = lastNode(routersStack: newRoutersStack)?.uuid
+    condition = { uuid == $0.uuid }
     router.performRequest(request, [], options, condition)
 
     return RouterState(routersStack: newRoutersStack)
@@ -216,6 +237,18 @@ func lastNode(routersStack: [RoutingNodeType]) -> RoutingNodeType? {
     return routersStack.last
 }
 
+func removeLastNode(routersStack: [RoutingNodeType]) -> [RoutingNodeType] {
+    if routersStack.count == 0 {
+        return []
+    }
+    var routersStack = routersStack
+    if let substack = routersStack.last?.substack, substack.count > 0 {
+        routersStack[routersStack.count - 1].substack = removeLastNode(routersStack: substack)
+        return routersStack
+    }
+    return Array(routersStack.prefix(routersStack.count - 1))
+}
+
 func addStackAfterLastNode(routersStack: inout [RoutingNodeType], suffixStack: [RoutingNodeType]) {
     for i in 0 ..< routersStack.count {
         if let substack = routersStack[i].substack, substack.count > 0 {
@@ -239,9 +272,10 @@ func addSubstackForLastNode(routersStack: inout [RoutingNodeType], suffixStack: 
 func log(routersStack: [RoutingNodeType], level: Int = 1) {
     routersStack.forEach {
         print(level, $0.uuid)
-        print(level, $0.getPresentable())
+        print(level, $0.getPresentable().description.replacingOccurrences(of: "MonarchRouterExample.", with: ""))
         if let substack = $0.substack, substack.count > 0 {
             log(routersStack: substack, level: level + 1)
         }
     }
 }
+
