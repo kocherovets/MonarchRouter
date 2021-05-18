@@ -13,6 +13,8 @@ public protocol RoutePresenterType {
     /// Returns the actual presentable object.
     var getPresentable: () -> (UIViewController) { get }
 
+    var isPresentableExists: () -> Bool { get }
+
     /// Allows to configure the presentable with parameters.
     var setParameters: (_ parameters: RouteParameters, _ presentable: UIViewController) -> Void { get }
 
@@ -39,12 +41,14 @@ public struct RoutePresenter: RoutePresenterType, RoutePresenterCapableOfModalPr
     /// - parameter unwind: Optional callback executed when the Presentable is no longer presented.
     public init(
         getPresentable: @escaping () -> (UIViewController),
+        isPresentableExists: @escaping () -> (Bool),
         setParameters: ((_ parameters: RouteParameters, _ presentable: UIViewController) -> Void)? = nil,
         presentModal: ((_ modal: UIViewController, _ over: UIViewController) -> Void)? = nil,
         dismissModal: ((_ modal: UIViewController) -> Void)? = nil,
         unwind: ((_ presentable: UIViewController) -> Void)? = nil
     ) {
         self.getPresentable = getPresentable
+        self.isPresentableExists = isPresentableExists
 
         if let setParameters = setParameters {
             self.setParameters = setParameters
@@ -80,6 +84,8 @@ public struct RoutePresenter: RoutePresenterType, RoutePresenterCapableOfModalPr
     public var dismissModal: ((_ modal: UIViewController) -> Void) = { _ in }
 
     public let getPresentable: () -> (UIViewController)
+    public let isPresentableExists: () -> Bool
+
     public var setParameters: (_ parameters: RouteParameters, _ presentable: UIViewController) -> Void = { _, _ in }
     public var unwind: (_ presentable: UIViewController) -> Void = { _ in }
 
@@ -108,7 +114,17 @@ public struct RoutePresenter: RoutePresenterType, RoutePresenterCapableOfModalPr
             presentable = newPresentable
             return newPresentable
         }
-        let presenter = RoutePresenter(getPresentable: maybeCachedPresentable, setParameters: setParameters, presentModal: presentModal, dismissModal: dismissModal, unwind: unwind)
+        
+        let isPresentableExists: () -> Bool = {
+            presentable != nil
+        }
+
+        let presenter = RoutePresenter(getPresentable: maybeCachedPresentable,
+                                       isPresentableExists: isPresentableExists,
+                                       setParameters: setParameters,
+                                       presentModal: presentModal,
+                                       dismissModal: dismissModal,
+                                       unwind: unwind)
 
         return presenter
     }
@@ -138,7 +154,17 @@ public struct RoutePresenter: RoutePresenterType, RoutePresenterCapableOfModalPr
             presentable = newPresentable
             return newPresentable
         }
-        let presenter = RoutePresenter(getPresentable: maybeCachedPresentable, setParameters: setParameters, presentModal: presentModal, dismissModal: dismissModal, unwind: unwind)
+        
+        let isPresentableExists: () -> Bool = {
+            presentable != nil
+        }
+
+        let presenter = RoutePresenter(getPresentable: maybeCachedPresentable,
+                                       isPresentableExists: isPresentableExists,
+                                       setParameters: setParameters,
+                                       presentModal: presentModal,
+                                       dismissModal: dismissModal,
+                                       unwind: unwind)
 
         return presenter
     }

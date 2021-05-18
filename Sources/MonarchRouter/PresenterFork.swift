@@ -19,10 +19,12 @@ public struct RoutePresenterFork: RoutePresenterType
     /// - parameter setOptionSelected: Sets the specified option as currently selected.
     public init(
         getPresentable: @escaping () -> (UIViewController),
+        isPresentableExists: @escaping () -> (Bool),
         setOptions: @escaping  (_ options: [UIViewController], _ container: UIViewController) -> (),
         setOptionSelected: @escaping  (_ option: UIViewController, _ container: UIViewController) -> ()
     ) {
         self.getPresentable = getPresentable
+        self.isPresentableExists = isPresentableExists
         self.setOptions = setOptions
         self.setOptionSelected = setOptionSelected
     }
@@ -59,12 +61,20 @@ public struct RoutePresenterFork: RoutePresenterType
             return newPresentable
         }
         
-        return RoutePresenterFork(getPresentable: maybeCachedPresentable, setOptions: setOptions, setOptionSelected: setOptionSelected)
+        let isPresentableExists: () -> Bool = {
+            presentable != nil
+        }
+
+        return RoutePresenterFork(getPresentable: maybeCachedPresentable,
+                                  isPresentableExists: isPresentableExists,
+                                  setOptions: setOptions,
+                                  setOptionSelected: setOptionSelected)
     }
     
     
     // Immutable, since either configured during init, or doesn't apply.
     public let getPresentable: () -> (UIViewController)
+    public let isPresentableExists: () -> Bool
     public let setParameters: (_ parameters: RouteParameters, _ presentable: UIViewController) -> () = { _,_ in }
     public let unwind: (_ presentable: UIViewController) -> () = { _ in }
 }

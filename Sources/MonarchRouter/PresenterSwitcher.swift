@@ -18,9 +18,11 @@ public struct RoutePresenterSwitcher: RoutePresenterType
     /// - parameter setOptionSelected: Sets the specified option as currently selected.
     public init(
         getPresentable: @escaping () -> (UIViewController),
+        isPresentableExists: @escaping () -> (Bool),
         setOptionSelected: @escaping  (_ option: UIViewController) -> ()
     ) {
         self.getPresentable = getPresentable
+        self.isPresentableExists = isPresentableExists
         self.setOptionSelected = setOptionSelected
     }
     
@@ -51,12 +53,19 @@ public struct RoutePresenterSwitcher: RoutePresenterType
             return newPresentable
         }
         
-        return RoutePresenterSwitcher(getPresentable: maybeCachedPresentable, setOptionSelected: setOptionSelected)
+        let isPresentableExists: () -> Bool = {
+            presentable != nil
+        }
+
+        return RoutePresenterSwitcher(getPresentable: maybeCachedPresentable,
+                                      isPresentableExists: isPresentableExists,
+                                      setOptionSelected: setOptionSelected)
     }
     
     
     // Immutable, since either configured during init, or doesn't apply.
     public let getPresentable: () -> (UIViewController)
+    public let isPresentableExists: () -> Bool
     public let setParameters: (_ parameters: RouteParameters, _ presentable: UIViewController) -> () = { _,_ in }
     public let unwind: (_ presentable: UIViewController) -> () = { _ in }
 }

@@ -59,6 +59,8 @@ public protocol RoutingNodeType {
     /// - returns: A Presentable object.
     func getPresentable() -> UIViewController
 
+    func isPresentableExists() -> Bool
+
     /// Determines should this `RoutingNode` or it's child handle the given Request.
     /// Configured for each respective `RoutingNode` type.
     var shouldHandleRoute: (_ request: RoutingRequestType, _ condition: (RoutingNodeType) -> Bool) -> Bool { get }
@@ -85,6 +87,10 @@ public struct RoutingNode<Presenter: RoutePresenterType>: RoutingNodeType {
 
     public func getPresentable() -> UIViewController {
         return presenter.getPresentable()
+    }
+
+    public func isPresentableExists() -> Bool {
+        presenter.isPresentableExists()
     }
 
     public var substack: [RoutingNodeType]?

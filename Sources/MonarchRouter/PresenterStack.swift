@@ -19,10 +19,12 @@ public struct RoutePresenterStack: RoutePresenterType
     /// - parameter prepareRootPresentable: Presets root Presentable when the stack's own Presentable is requested.
     public init(
         getPresentable: @escaping () -> (UIViewController),
+        isPresentableExists: @escaping () -> (Bool),
         setStack: @escaping  (_ stack: [UIViewController], _ container: UIViewController) -> (),
         prepareRootPresentable: @escaping  (_ rootPresentable: UIViewController, _ container: UIViewController) -> ()
     ) {
         self.getPresentable = getPresentable
+        self.isPresentableExists = isPresentableExists
         self.setStack = setStack
         self.prepareRootPresentable = prepareRootPresentable
     }
@@ -59,12 +61,20 @@ public struct RoutePresenterStack: RoutePresenterType
             return newPresentable
         }
         
-        return RoutePresenterStack(getPresentable: maybeCachedPresentable, setStack: setStack, prepareRootPresentable: prepareRootPresentable)
+        let isPresentableExists: () -> Bool = {
+            presentable != nil
+        }
+
+        return RoutePresenterStack(getPresentable: maybeCachedPresentable,
+                                   isPresentableExists: isPresentableExists,
+                                   setStack: setStack,
+                                   prepareRootPresentable: prepareRootPresentable)
     }
     
     
     // Immutable, since either configured during init, or doesn't apply.
     public let getPresentable: () -> (UIViewController)
+    public let isPresentableExists: () -> Bool
     public let setParameters: (_ parameters: RouteParameters, _ presentable: UIViewController) -> () = { _,_ in }
     public let unwind: (_ presentable: UIViewController) -> () = { _ in }
 }
