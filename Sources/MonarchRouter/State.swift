@@ -278,3 +278,9 @@ func log(routersStack: [RoutingNodeType], level: Int = 1) {
         }
     }
 }
+
+public extension RouterStore {
+    func topVC() -> UIViewController? {
+        lastNode(routersStack: state.routersStack)?.getPresentable()
+    }
+}
