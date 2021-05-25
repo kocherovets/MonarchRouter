@@ -59,6 +59,7 @@ public final class RouterStore {
     /// - parameter request: Routing Request.
     /// - parameter options: Special options for navigation (see `DispatchRouteOption` enum).
     public func dispatch(_ request: RoutingRequestType, options: [DispatchRouteOption] = []) {
+        lastRequest = request
         state = routerReducer(request: request, router: router(), state: state, options: options)
     }
 
@@ -94,6 +95,8 @@ public final class RouterStore {
     /// Implements navigation via `RoutingNodeType`'s `setRequest` callback.
     /// Unwinds unused `RoutingNodes` (see `RoutingNodeType`'s `unwind()` function).
     let reducer: (_ request: RoutingRequestType, _ router: RoutingNodeType, _ state: RouterStateType, _ options: [DispatchRouteOption]) -> RouterStateType
+    
+    public var lastRequest: RoutingRequestType?
 }
 
 /// Describes `RouterState` object.
